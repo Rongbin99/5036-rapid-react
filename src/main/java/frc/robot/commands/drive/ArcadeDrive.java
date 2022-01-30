@@ -1,26 +1,28 @@
-package frc.robot.commands;
+package frc.robot.commands.drive;
 
 import java.util.Set;
+import java.util.function.DoubleSupplier;
 
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 
 import frc.robot.subsystems.Drivetrain;
-import frc.robot.Controller;
 
 public class ArcadeDrive implements Command {
     private Drivetrain drivetrain;
-    private Controller driver;
+    private DoubleSupplier throttle, wheel;
 
-    public ArcadeDrive(Drivetrain drivetrain) {
+    public ArcadeDrive(Drivetrain drivetrain, DoubleSupplier throttle, DoubleSupplier wheel) {
         this.drivetrain = drivetrain;
+        this.throttle = throttle;
+        this.wheel = wheel;
     }
 
     public void execute() {
-        double y = driver.getAxis(Controller.Axis.LeftY);
-        double x = driver.getAxis(Controller.Axis.RightX);
-        drivetrain.motorL.set(y + x);
-        drivetrain.motorR.set(y - x);
+        drivetrain.arcadeDrive(
+            throttle.getAsDouble(),
+            wheel.getAsDouble()
+        );
     }
 
     public void end() {

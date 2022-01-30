@@ -2,13 +2,13 @@ package frc.robot;
 
 public class RobotMap {
     public static enum PWM {
-        // example for now
-        BackMotorLeft(0),
-        BackMotorRight(1),
-        FrontMotorLeft(2),
-        FrontMotorRight(3);
+        // placeholders
+        RIGHT_ENCODER_IN(0),
+        RIGHT_ENCODER_OUT(1),
+        LEFT_ENCODER_IN(2),
+        LEFT_ENCODER_OUT(3);
 
-        private int port;
+        private final int port;
 
         private PWM(int port) {
             this.port = port;
@@ -19,13 +19,33 @@ public class RobotMap {
         }
     }
 
-    public static enum Controller {
-        Driver(0),
-        Operator(1);
+    public static enum CAN {
+        // placeholders
+        BACK_MOTOR_LEFT(0),
+        BACK_MOTOR_RIGHT(1),
+        FRONT_MOTOR_LEFT(2),
+        FRONT_MOTOR_RIGHT(3),
+        INTAKE_TOP(4),
+        INTAKE_BOTTOM(5);
 
-        private int port;
+        private final int id;
 
-        private Controller(int port) {
+        private CAN(int id) {
+            this.id = id;
+        }
+
+        public int id() {
+            return id;
+        }
+    }
+
+    public static enum Gamepad {
+        DRIVER(0),
+        OPERATOR(1);
+
+        private final int port;
+
+        private Gamepad(int port) {
             this.port = port;
         }
 
