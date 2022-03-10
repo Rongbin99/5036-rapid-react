@@ -3,7 +3,6 @@ package frc.robot.subsystems;
 
 import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Subsystem;
 
 public class Limelight implements Subsystem {
@@ -35,7 +34,7 @@ public class Limelight implements Subsystem {
     private final static String NETWORK_TABLE_NAME = "limelight";
 
     private final NetworkTable feed;
-    public Target target;
+    private Target target;
 
     public Limelight() {
         feed = NetworkTableInstance.getDefault().getTable(NETWORK_TABLE_NAME);
@@ -46,7 +45,7 @@ public class Limelight implements Subsystem {
     }
 
     public void setCameraMode(CameraMode camMode) {
-        feed.getEntry("cameraMode").setNumber(camMode.ordinal());
+        feed.getEntry("camMode").setNumber(camMode.ordinal());
     }
 
     public void periodic() {

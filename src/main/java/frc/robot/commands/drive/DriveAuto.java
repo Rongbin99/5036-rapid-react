@@ -10,47 +10,43 @@ import frc.robot.subsystems.Drivetrain;
 public class DriveAuto implements Command {
     private Drivetrain drivetrain;
     private PIDController driveController, turnController;
-    private static int kp, ki, kd;
-    private boolean reverse;
-    private double target, angleTarget;
     private double distance;
 
-    public DriveAuto(Drivetrain drivetrain, double distance, boolean reverse) {
+    public DriveAuto(Drivetrain drivetrain, double distance) {
         this.drivetrain = drivetrain;
         this.distance = distance;
-        this.reverse = reverse;
-        kp = ki = kd = 0; // TODO
-        driveController = new PIDController(kp, ki, kd);
-        turnController = new PIDController(0, 0, 0);
+        driveController = new PIDController(0.015, 0, 0.03);
+        turnController = new PIDController(0.008, 0, 10);
     }
 
-    public DriveAuto(Drivetrain drivetrain, double distance) {
-        this(drivetrain, distance, false);
-    }
-
+    @Override
     public void initialize() {
         driveController.reset();
-        driveController.setSetpoint(drivetrain.getAvgEncDistance() - distance);
+        driveController.setSetpoint(drivetrain.getEncAvg() - distance);
         turnController.reset();
         turnController.setSetpoint(drivetrain.getHeading());
     }
 
+    @Override
     public void execute() {
         driveController.setPID(SmartDashboard.getNumber("P", 0), SmartDashboard.getNumber("I", 0), SmartDashboard.getNumber("D", 0));
         drivetrain.arcadeDrive(
-            driveController.calculate(drivetrain.getAvgEncDistance()) * (reverse ? -1 : 1),
+            driveController.calculate(drivetrain.getEncAvg()),
             turnController.calculate(drivetrain.getHeading())
         );
     }
 
-    public void end() {
+    @Override
+    public void end(boolean interrupted) {
         drivetrain.stop();
     }
 
+    @Override
     public boolean isFinished() {
         return driveController.atSetpoint() && turnController.atSetpoint();
     }
 
+    @Override
     public Set<Subsystem> getRequirements() {
         return Set.of(drivetrain);
     }
