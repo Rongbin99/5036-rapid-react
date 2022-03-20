@@ -17,31 +17,20 @@ import edu.wpi.first.math.controller.RamseteController;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 
 import com.kauailabs.navx.frc.AHRS;
+import com.revrobotics.CANSparkMax;
 import com.revrobotics.RelativeEncoder;
+import com.revrobotics.CANSparkMax.IdleMode;
 
 import frc.robot.Constants;
-import frc.robot.Dashboard;
+import frc.ui.Dashboard;
+import frc.ui.SendableChassisSpeeds;
 
-public class Drivetrain implements Subsystem {
-    // stupid thing isn't sendable. I made the stupid thing sendable.
-    private class SendableChassisSpeeds extends ChassisSpeeds implements Sendable {
-        public SendableChassisSpeeds(ChassisSpeeds speeds) {
-            super(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond, speeds.omegaRadiansPerSecond);
-        }
-
-        public void initSendable(SendableBuilder builder) {
-            builder.setSmartDashboardType("ChassisSpeeds");
-            builder.addDoubleProperty("vX", () -> vxMetersPerSecond, null);
-            builder.addDoubleProperty("vY", () -> vyMetersPerSecond, null);
-            builder.addDoubleProperty("vR", () -> omegaRadiansPerSecond, null);
-            builder.setActuator(true);
-        }
-    }
-
+public class Drivetrain implements Subsystem, AutoCloseable {
     // motors/sensors
-    private MotorControllerGroup motorL, motorR;
+    private CANSparkMax l1, l2, r1, r2;
     private RelativeEncoder encoderL, encoderR;
     private AHRS gyro;
+    private IdleMode idleMode;
 
     // odometry
     private SimpleMotorFeedforward feedforward;
@@ -57,20 +46,26 @@ public class Drivetrain implements Subsystem {
     private double quickStopAccumulator = 0.0;
 
     public Drivetrain(
-        MotorControllerGroup motorL,
-        MotorControllerGroup motorR,
+        CANSparkMax l1,
+        CANSparkMax l2,
+        CANSparkMax r1,
+        CANSparkMax r2,
         RelativeEncoder encoderL,
         RelativeEncoder encoderR,
         AHRS gyro
     ) {
-        this.motorL = motorL;
-        this.motorR = motorR;
+        this.l1 = l1;
+        this.l2 = l2;
+        this.r1 = r1;
+        this.r2 = r2;
         this.encoderL = encoderL;
         this.encoderR = encoderR;
         this.gyro = gyro;
 
-        motorL.setInverted(false);
-        motorR.setInverted(true);
+        l1.setInverted(false);
+        l2.setInverted(false);
+        r1.setInverted(true);
+        r2.setInverted(true);
         encoderL.setPositionConversionFactor(42);
         encoderR.setPositionConversionFactor(42);
 
@@ -84,10 +79,10 @@ public class Drivetrain implements Subsystem {
         updateOdometry();
     
         new Dashboard("Drivetrain")
-            .add("Left motor", motorL)
-            .add("Right motor", motorR)
             .add("Gyro", gyro)
             .add("Velocity", chassisSpeeds);
+
+        idleMode = IdleMode.kBrake;
     }
 
     private double clamp(double n, double min, double max) {
@@ -96,15 +91,16 @@ public class Drivetrain implements Subsystem {
 
     // this is aadi's
     public void arcadeDrive(double throttle, double wheel) {
-        motorL.set(throttle + wheel);
-        motorR.set(throttle - wheel);
+        l1.set(throttle + wheel);
+        l2.set(throttle + wheel);
+        r1.set(throttle - wheel);
+        r2.set(throttle - wheel);
     }
 
     // https://github.com/Team254/FRC-2016-Public/blob/master/src/com/team254/frc2016/CheesyDriveHelper.java
-    public void curvatureDrive(double throttle, double wheel) {
+    public void curvatureDrive(double throttle, double wheel, boolean isQuickTurn) {
         double overPower;
         double angularPower;
-        boolean isQuickTurn = stopped(); // TODO: is this right? might want to put a threshold > 0.
 
         if (isQuickTurn) {
             if (Math.abs(throttle) < 0.2) {
@@ -141,22 +137,17 @@ public class Drivetrain implements Subsystem {
             rightPwm = -1.0;
         }
 
-        motorL.set(leftPwm);
-        motorR.set(rightPwm);
-    }
-
-    public void tankDriveVolts(double voltageL, double voltageR) {
-        motorL.setVoltage(voltageL);
-        motorR.setVoltage(voltageR);
+        l1.set(leftPwm);
+        l2.set(leftPwm);
+        r1.set(rightPwm);
+        r2.set(rightPwm);
     }
 
     public void stop() {
-        motorL.set(0);
-        motorR.set(0);
-    }
-
-    public boolean stopped() {
-        return motorL.get() == 0 && motorR.get() == 0;
+        l1.stopMotor();
+        l2.stopMotor();
+        r1.stopMotor();
+        r2.stopMotor();
     }
 
     public double getHeading() {
@@ -172,7 +163,7 @@ public class Drivetrain implements Subsystem {
     }
 
     public double getEncR() {
-        return -encoderR.getPosition() / 22.953;
+        return encoderR.getPosition() / 22.953;
     }
 
     public double getEncAvg() {
@@ -190,6 +181,7 @@ public class Drivetrain implements Subsystem {
     public void updateOdometry() {
         wheelSpeeds = new DifferentialDriveWheelSpeeds(encoderL.getVelocity(), encoderR.getVelocity());
         chassisSpeeds = new SendableChassisSpeeds(kinematics.toChassisSpeeds(wheelSpeeds));
+        // please don't ask, cause I don't know
         Pose2d poseMeters = odometry.update(
             new Rotation2d(Math.toRadians(-gyro.getAngle()+90)),
             Units.inchesToMeters(getEncL()),
@@ -207,5 +199,21 @@ public class Drivetrain implements Subsystem {
         encoderL.setPosition(0);
         encoderR.setPosition(0);
         odometry.resetPosition(newPose, gyro.getRotation2d());
+    }
+
+    public void setRampRate(double rampRate) {
+        l1.setOpenLoopRampRate(rampRate);
+        l2.setOpenLoopRampRate(rampRate);
+        r1.setOpenLoopRampRate(rampRate);
+        r2.setOpenLoopRampRate(rampRate);
+    }
+
+    @Override
+    public void close() {
+        l1.close();
+        l2.close();
+        r1.close();
+        r2.close();
+        gyro.close();
     }
 }

@@ -2,11 +2,7 @@ package frc.robot;
 
 public class RobotMap {
     public static enum DIO {
-        LEFT_ENCODER_IN         (0),
-        LEFT_ENCODER_OUT        (1),
-        RIGHT_ENCODER_IN        (3),
-        RIGHT_ENCODER_OUT       (2),
-        ARM_BOTTOM_LIMIT_SWITCH (4);
+        ARM_BOTTOM_LIMIT_SWITCH (3);
 
         private final int port;
 
@@ -40,7 +36,9 @@ public class RobotMap {
         FRONT_MOTOR_RIGHT   (4),
         ARM                 (5),
         INTAKE_UNO          (6),
-        INTAKE_DOS          (7);
+        INTAKE_DOS          (7),
+        CLIMBER_UNO         (8),
+        CLIMBER_DOS         (9);
 
         private final int id;
 
