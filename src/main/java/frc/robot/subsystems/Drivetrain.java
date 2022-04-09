@@ -38,6 +38,8 @@ public class Drivetrain implements Subsystem, AutoCloseable {
     private DifferentialDriveWheelSpeeds wheelSpeeds;
     private SendableChassisSpeeds chassisSpeeds;
     private DifferentialDriveOdometry odometry;
+    private double prevDist = 0.0;
+    private double velocity = 0.0;
     private Pose2d pose;
 
     public RamseteController ramseteController = new RamseteController();
@@ -62,10 +64,16 @@ public class Drivetrain implements Subsystem, AutoCloseable {
         this.encoderR = encoderR;
         this.gyro = gyro;
 
-        l1.setInverted(false);
-        l2.setInverted(false);
-        r1.setInverted(true);
-        r2.setInverted(true);
+        final int CURR_LIM = 40;
+
+        l1.enableVoltageCompensation(12.0);
+        l1.setSmartCurrentLimit(CURR_LIM);
+        l2.enableVoltageCompensation(12.0);
+        l2.setSmartCurrentLimit(CURR_LIM);
+        r1.enableVoltageCompensation(12.0);
+        r1.setSmartCurrentLimit(CURR_LIM);
+        r2.enableVoltageCompensation(12.0);
+        r1.setSmartCurrentLimit(CURR_LIM);
         encoderL.setPositionConversionFactor(42);
         encoderR.setPositionConversionFactor(42);
 
@@ -150,11 +158,11 @@ public class Drivetrain implements Subsystem, AutoCloseable {
         r2.stopMotor();
     }
 
-    public double getHeading() {
+    public double getAngle() {
         return gyro.getAngle();
     }
 
-    public double getHeadingRate() {
+    public double getAngularVelocity() {
         return gyro.getRate();
     }
 
@@ -166,16 +174,20 @@ public class Drivetrain implements Subsystem, AutoCloseable {
         return encoderR.getPosition() / 22.953;
     }
 
-    public double getEncAvg() {
+    public double getEncPosition() {
         return (getEncL() + getEncR()) / 2;
+    }
+
+    public double getEncVelocity() {
+        return (encoderL.getVelocity() / 22.953 + encoderR.getVelocity() / 22.953) / 2;
     }
 
     public Pose2d getPose() {
         return pose;
     }
 
-    public ChassisSpeeds getVelocity() {
-        return chassisSpeeds;
+    public double getVelocity() {
+        return velocity;
     }
 
     public void updateOdometry() {
@@ -192,6 +204,9 @@ public class Drivetrain implements Subsystem, AutoCloseable {
             Units.metersToInches(poseMeters.getY()),
             poseMeters.getRotation().minus(new Rotation2d(Math.toRadians(90)))
         );
+        velocity = (getEncPosition() - prevDist) / 0.02;
+        prevDist = getEncPosition();
+        SmartDashboard.putNumber("enc", getEncPosition());
     }
 
     public void resetOdometry(Pose2d newPose) {
@@ -207,6 +222,13 @@ public class Drivetrain implements Subsystem, AutoCloseable {
         r1.setOpenLoopRampRate(rampRate);
         r2.setOpenLoopRampRate(rampRate);
     }
+
+    public void setIdleMode(IdleMode m) {
+        l1.setIdleMode(m); 
+        l2.setIdleMode(m);
+        r1.setIdleMode(m);
+        r2.setIdleMode(m);
+      }
 
     @Override
     public void close() {

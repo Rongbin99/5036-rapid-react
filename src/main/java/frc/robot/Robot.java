@@ -7,6 +7,7 @@ package frc.robot;
 import com.revrobotics.CANSparkMax.IdleMode;
 
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
@@ -31,7 +32,7 @@ public class Robot extends TimedRobot {
     // Instantiate our RobotContainer.  This will perform all our button bindings, and put our
     // autonomous chooser on the dashboard.
     m_robotContainer = new RobotContainer();
-    m_robotContainer.setIdleMode(IdleMode.kCoast);
+    m_robotContainer.drivetrain.setIdleMode(IdleMode.kCoast);
     //CameraServer.startAutomaticCapture();
   }
 
@@ -57,7 +58,9 @@ public class Robot extends TimedRobot {
   /** This function is called once each time the robot enters Disabled mode. */
   @Override
   public void disabledInit() {
-    m_robotContainer.setIdleMode(IdleMode.kCoast);
+    m_robotContainer.drivetrain.setIdleMode(IdleMode.kBrake);
+    Timer.delay(1.0);
+    m_robotContainer.drivetrain.setIdleMode(IdleMode.kCoast);
   }
 
   @Override
@@ -66,7 +69,8 @@ public class Robot extends TimedRobot {
   /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override
   public void autonomousInit() {
-    m_robotContainer.setIdleMode(IdleMode.kBrake);
+    m_robotContainer.drivetrain.setIdleMode(IdleMode.kBrake);
+    m_robotContainer.drivetrain.setRampRate(0.65);
     m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
     // schedule the autonomous command (example)
@@ -87,7 +91,8 @@ public class Robot extends TimedRobot {
     // teleop starts running. If you want the autonomous to
     // continue until interrupted by another command, remove
     // this line or comment it out.
-    m_robotContainer.setIdleMode(IdleMode.kBrake);
+    m_robotContainer.drivetrain.setIdleMode(IdleMode.kBrake);
+    m_robotContainer.drivetrain.setRampRate(0);
     if (m_autonomousCommand != null) {
       m_autonomousCommand.cancel();
     }

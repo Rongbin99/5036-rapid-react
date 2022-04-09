@@ -24,30 +24,14 @@ import frc.robot.subsystems.Arm;
 import frc.robot.subsystems.Drivetrain;
 import frc.robot.subsystems.Intake;
 
-public class TwoBlue extends SequentialCommandGroup {
-    public TwoBlue(Drivetrain drivetrain, Arm arm, Intake intake) {
+public class DriveStraight extends SequentialCommandGroup {
+    public DriveStraight(Drivetrain drivetrain, Arm arm, Intake intake) {
         super(
             new InstantCommand(() -> System.out.println("begin")),
             new InstantCommand(() -> drivetrain.resetOdometry(new Pose2d())),
             new InstantCommand(() -> drivetrain.setRampRate(0.65)),
-            new AdmitCargo(intake),
-            new InstantCommand(() -> arm.override(true)),
 
-            new DriveAuto(drivetrain, +36.0),
-            new StopIntake(intake),
-
-            new InstantCommand(() -> {
-                arm.override(false);
-                intake.runPercent(.70);
-            }),
-
-            new DriveAuto(drivetrain, -62.0),
-            new StopIntake(intake),
-            new TurnAutoJank(drivetrain, +162.0),
-
-            new EjectCargo(intake),
-            new WaitCommand(0.5),
-            new StopIntake(intake),
+            new DriveAuto(drivetrain, +92.0),
 
             new InstantCommand(() -> drivetrain.setRampRate(0)),
             new InstantCommand(() -> System.out.println("complete"))

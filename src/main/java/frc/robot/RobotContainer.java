@@ -33,14 +33,20 @@ import edu.wpi.first.wpilibj.GenericHID.RumbleType;
 import frc.commands.OrElseCommand;
 import frc.hid.PS4Controller;
 import frc.hid.XBOXController;
-import frc.robot.commands.auto.FiveBlue;
+import frc.math.VelocityTuner;
+import frc.robot.commands.auto.ThreeBlue;
 import frc.robot.commands.auto.TwoBlue;
+import frc.robot.commands.auto.DriveStraight;
+import frc.robot.commands.auto.FourBlue;
+import frc.robot.commands.auto.Nothing;
+import frc.robot.commands.auto.Snipe;
 import frc.robot.commands.drive.ArcadeDrive;
 import frc.robot.commands.drive.CurvatureDrive;
 import frc.robot.commands.drive.DriveAuto;
 import frc.robot.commands.drive.DriveToPoint;
 import frc.robot.commands.drive.FollowTrajectory;
 import frc.robot.commands.drive.TurnAuto;
+import frc.robot.commands.drive.TurnAutoCreative;
 import frc.robot.commands.drive.FollowTrajectory.PoseData;
 import frc.robot.subsystems.Arm;
 import frc.robot.subsystems.Drivetrain;
@@ -139,13 +145,6 @@ public class RobotContainer {
   private final ShuffleboardTab mainTab = Shuffleboard.getTab("Main");
   private final SendableChooser<Command> autoChooser = new SendableChooser<>();
 
-  public void setIdleMode(IdleMode m) {
-    l1.setIdleMode(m); 
-    l2.setIdleMode(m);
-    r1.setIdleMode(m);
-    r2.setIdleMode(m);
-  }
-
   private boolean stopped = true;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
@@ -210,11 +209,13 @@ public class RobotContainer {
     r2.setOpenLoopRampRate(rampRate);
 
     mainTab.add("Auto chooser", autoChooser);
-    autoChooser.addOption("2 blue", new SequentialCommandGroup(
-      new InstantCommand(() -> drivetrain.resetOdometry(new Pose2d())),
-      new TwoBlue(drivetrain, arm, intake)
-    ));
-    //autoChooser.addOption("5 blue", new FiveBlue(drivetrain));
+    autoChooser.addOption("2 blue", new TwoBlue(drivetrain, arm, intake));
+    autoChooser.addOption("3 blue", new ThreeBlue(drivetrain, arm, intake));
+    autoChooser.addOption("4 blue", new FourBlue(drivetrain, arm, intake));
+    autoChooser.addOption("Snipe blue", new Snipe(drivetrain, arm, intake));
+    autoChooser.addOption("Taxi", new DriveStraight(drivetrain, arm, intake));
+
+    autoChooser.addOption("Nothing", new Nothing(drivetrain, arm, intake));
 
     // Configure the button bindings
     configureButtonBindings();
@@ -227,22 +228,31 @@ public class RobotContainer {
    * edu.wpi.first.wpilibj2.command.button.JoystickButton}.
    */
   private void configureButtonBindings() {
-    driver.A.whileActiveOnce(new TwoBlue(drivetrain, arm, intake));
-    driver.X.whenInactive(new InstantCommand(() -> drivetrain.resetOdometry(new Pose2d()), drivetrain));
-    driver.Y.whenActive(new InstantCommand(
-      () -> {
-        if (idleMode == IdleMode.kBrake) {
-          idleMode = IdleMode.kCoast;
-        } else {
-          idleMode = IdleMode.kBrake;
-        }
-        setIdleMode(idleMode);
-      },
+    VelocityTuner driveVelocityTuner = new VelocityTuner(
+      drivetrain::getEncPosition,
+      drivetrain::getEncVelocity,
+      out -> drivetrain.arcadeDrive(out, 0.0)
+    );
+
+    VelocityTuner turnVelocityTuner = new VelocityTuner(
+      drivetrain::getAngle,
+      drivetrain::getAngularVelocity,
+      out -> drivetrain.arcadeDrive(0.0, out)
+    );
+
+    driver.X.whileActiveOnce(new RunCommand(
+      () -> driveVelocityTuner.driveVelocity(12.0),
+      drivetrain
+    ));
+
+    driver.A.whileActiveOnce(new RunCommand(
+      () -> turnVelocityTuner.driveVelocity(90.0),
       drivetrain
     ));
 
     // intake
     driver.rightTrigger.whileActiveOnce(admitCargo);
+
     driver.rightBumper.whenInactive(new ParallelCommandGroup(
       ejectCargo,
       new StartEndCommand(
@@ -262,7 +272,10 @@ public class RobotContainer {
     ));
 
     driver.leftBumper.whileActiveOnce(new StartEndCommand(
-      climber::retract,
+      () -> {
+        arm.override(true);
+        climber.retract();
+      },
       climber::stop,
       climber
     ));
@@ -301,6 +314,6 @@ public class RobotContainer {
    */
   public Command getAutonomousCommand() {
     drivetrain.resetOdometry(new Pose2d());
-    return new TwoBlue(drivetrain, arm, intake).withTimeout(15.0);
+    return autoChooser.getSelected();
   }
 }
